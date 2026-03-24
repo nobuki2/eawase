@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パネル絵合わせゲーム（大画面版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { text-align: center; background: #f0f0f0; font-family: sans-serif; margin: 0; padding: 20px; user-select: none; }
+        
+        h1 { font-size: 42px; margin-bottom: 10px; }
+        p { font-size: 20px; margin-top: 0; }
+
+        #game-view { display: block; }
+        
+        /* パネルと動画を囲むコンテナ（2倍） */
+        .slot-machine-container {
+            position: relative;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+            border-radius: 24px; 
+            border: 16px solid #444; 
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4); 
+        }
+
+        .slot-machine {
+            display: flex;
+            justify-content: center;
+        }
+        
+        /* リールの枠（320px） */
+        .reel-frame {
+            width: 320px; 
+            position: relative;
+            cursor: pointer;
+            background: #fff;
+            overflow: hidden;
+        }
+        
+        .reel-content {
+            position: absolute;
+            width: 100%;
+            top: 0;
+        }
+
+        .panel-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            box-sizing: border-box;
+        }
+
+        /* --- 動画表示エリア --- */
+        #video-container {
+            display: none; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #fff; 
+            border-radius: 0; 
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            outline: none;
+            background: #fff; 
+            border-radius: 0; 
+            display: block;
+        }
+
+        /* ホワイトアウト用のオーバレイ */
+        #whiteout-overlay {
+            display: none; 
+            position: fixed; 
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff; 
+            opacity: 0; 
+            z-index: 9999; 
+            transition: opacity 0.5s ease-out; 
+            pointer-events: none; 
+        }
+
+        .settings-btn {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #888; color: #fff; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 18px;
+        }
+
+        #settings-view {
+            display: none; max-width: 800px; margin: 0 auto; background: white;
+            padding: 40px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left;
+        }
+        .setting-group { margin-bottom: 25px; }
+        .setting-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; font-size: 18px; }
+        .setting-group textarea {
+            width: 100%; height: 120px; padding: 15px; box-sizing: border-box; font-size: 16px;
+            border: 2px solid #ccc; border-radius: 8px; font-family: monospace; line-height: 1.5;
+        }
+        
+        .btn-action {
+            padding: 20px 80px; font-size: 32px; font-weight: bold; margin-top: 40px;
+            background: #ff5722; color: white; border: none; border-radius: 60px; cursor: pointer;
+            box-shadow: 0 8px 0 #d84315;
+        }
+        .btn-action:active { transform: translateY(8px); box-shadow: none; }
+        .reset-btn { background: #d32f2f; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div id="whiteout-overlay"></div>
+
+    <div id="game-view">
+        <h1>絵合わせゲーム</h1>
+        <p>上をクリックで上へ、下をクリックで下へ回るよ</p>
+
+        <div class="slot-machine-container">
+            <div class="slot-machine">
+                <div class="reel-frame" onclick="handleReelClick(event, 1)">
+                    <div id="reel1" class="reel-content"></div>
+                </div>
+                <div class="reel-frame" onclick="handleReelClick(event, 2)">
+                    <div id="reel2" class="reel-content"></div>
+                </div>
+            </div>
+            
+            <div id="video-container">
+                <video id="success-video" playsinline></video>
+            </div>
+        </div>
+
+        <button class="settings-btn" onclick="toggleSettings()">⚙️ 設定</button>
+    </div>
+
+    <div id="settings-view">
+        <h2>⚙️ 管理設定</h2>
+        <div class="setting-group">
+            <label>左のパネル画像（複数行可）</label>
+            <textarea id="input-left" placeholder="例:&#10;left1.png"></textarea>
+        </div>
+        <div class="setting-group">
+            <label>右のパネル画像（複数行可）</label>
+            <textarea id="input-right" placeholder="例:&#10;right1.png"></textarea>
+        </div>
+        <div class="setting-group">
+            <label>成功時動画（複数行可）</label>
+            <textarea id="textarea-videos" placeholder="例:&#10;video1.mp4"></textarea>
+        </div>
+        <button class="btn-action" style="width: 100%; margin-top: 20px;" onclick="saveSettings()">保存して戻る</button>
+        <button class="btn-action reset-btn" style="width: 100%;" onclick="resetData()">設定を初期化する</button>
+    </div>
+
+    <script>
+        const CUT_OFF_SECONDS = 2.0; 
+
+        let config = {
+            leftImages: ['https://placehold.jp/3d4070/ffffff/320x320.png?text=L1', 'https://placehold.jp/40703d/ffffff/320x320.png?text=L2', 'https://placehold.jp/703d40/ffffff/320x320.png?text=L3'],
+            rightImages: ['https://placehold.jp/3d4070/ffffff/320x320.png?text=R1', 'https://placehold.jp/40703d/ffffff/320x320.png?text=R2', 'https://placehold.jp/703d40/ffffff/320x320.png?text=R3'],
+            videos: []
+        };
+
+        let displayedImages = { 1: [], 2: [] }; 
+        let positions = { 1: 0, 2: 0 }; 
+        let calculatedPanelHeight = 320; 
+        let isAnimating = false; 
+
+        function init() {
+            try {
+                const savedConfig = localStorage.getItem('matchGameConfigV3');
+                if (savedConfig) {
+                    const parsed = JSON.parse(savedConfig);
+                    if (parsed.left && parsed.left.length > 0) config.leftImages = parsed.left;
+                    if (parsed.right && parsed.right.length > 0) config.rightImages = parsed.right;
+                    if (parsed.videos) config.videos = parsed.videos;
+                    
+                    document.getElementById('input-left').value = config.leftImages.join('\n');
+                    document.getElementById('input-right').value = config.rightImages.join('\n');
+                    document.getElementById('textarea-videos').value = config.videos.join('\n');
+                }
+            } catch (error) {
+                localStorage.removeItem('matchGameConfigV3');
+            }
+            
+            displayedImages[1] = createLoopArray(config.leftImages);
+            displayedImages[2] = createLoopArray(config.rightImages);
+
+            const originalLength1 = config.leftImages.length;
+            const originalLength2 = config.rightImages.length;
+            positions[1] = 1; 
+
+            if (originalLength1 === originalLength2 && originalLength1 > 1) {
+                positions[2] = Math.floor(Math.random() * (originalLength2 - 1)) + 2; 
+            } else {
+                positions[2] = 1;
+            }
+
+            renderReels();
+        }
+
+        function createLoopArray(arr) {
+            if (!arr || arr.length === 0) return [];
+            return [arr[arr.length - 1], ...arr, arr[0]];
+        }
+
+        function renderReels() {
+            let leftHtml = '';
+            displayedImages[1].forEach((src) => { leftHtml += `<img src="${src}" class="panel-img">`; });
+            const reel1Content = document.getElementById('reel1');
+            if (reel1Content) reel1Content.innerHTML = leftHtml;
+
+            let rightHtml = '';
+            displayedImages[2].forEach((src) => { rightHtml += `<img src="${src}" class="panel-img">`; });
+            const reel2Content = document.getElementById('reel2');
+            if (reel2Content) reel2Content.innerHTML = rightHtml;
+
+            const firstImg = reel1Content ? reel1Content.querySelector('img') : null;
+            if (firstImg) {
+                if (firstImg.complete) { initReelHeight(firstImg.clientHeight); } 
+                else { firstImg.onload = function() { initReelHeight(this.clientHeight); }; }
+            } else { initReelHeight(320); } 
+        }
+
+        function initReelHeight(height) {
+            calculatedPanelHeight = height; 
+            document.querySelectorAll('.reel-frame').forEach(frame => {
+                frame.style.height = height + 'px'; 
+            });
+            updateReelPosition(1, false);
+            updateReelPosition(2, false);
+        }
+
+        function handleReelClick(event, id) {
+            if (isAnimating) return;
+
+            const rect = event.currentTarget.getBoundingClientRect();
+            const clickY = event.clientY - rect.top;
+            const frameHeight = rect.height;
+
+            if (clickY < frameHeight / 2) {
+                rotateReel(id, 'next');
+            } else {
+                rotateReel(id, 'prev');
+            }
+        }
+
+        function rotateReel(id, direction) {
+            const originalLength = id === 1 ? config.leftImages.length : config.rightImages.length;
+            if (originalLength <= 1) return;
+
+            isAnimating = true;
+
+            if (direction === 'next') {
+                positions[id]++;
+            } else {
+                positions[id]--;
+            }
+
+            updateReelPosition(id, true);
+
+            setTimeout(() => {
+                if (positions[id] >= originalLength + 1) {
+                    positions[id] = 1;
+                    updateReelPosition(id, false);
+                }
+                else if (positions[id] <= 0) {
+                    positions[id] = originalLength;
+                    updateReelPosition(id, false);
+                }
+                isAnimating = false;
+                
+                judge();
+            }, 200); 
+        }
+
+        function updateReelPosition(id, animate) {
+            const reelContent = document.getElementById(`reel${id}`);
+            if (!reelContent) return;
+
+            const newTop = -(positions[id] * calculatedPanelHeight);
+            if (animate) {
+                reelContent.style.transition = 'top 0.2s ease-out';
+            } else {
+                reelContent.style.transition = 'none';
+            }
+            reelContent.style.top = newTop + "px";
+        }
+
+        function judge() {
+            const realIdx1 = positions[1] - 1;
+            const realIdx2 = positions[2] - 1;
+
+            if (realIdx1 === realIdx2) {
+                const matchedIndex = realIdx1;
+                let videoSrc = '';
+                
+                if (config.videos.length > 0) {
+                    videoSrc = config.videos[matchedIndex] ? config.videos[matchedIndex] : config.videos[0];
+                }
+                
+                if (videoSrc) {
+                    const videoElement = document.getElementById('success-video');
+                    videoElement.src = videoSrc;
+                    videoElement.load();
+
+                    document.getElementById('video-container').style.display = 'flex';
+                    
+                    videoElement.ontimeupdate = function() {
+                        if (videoElement.duration && (videoElement.duration - videoElement.currentTime <= CUT_OFF_SECONDS)) {
+                            videoElement.ontimeupdate = null; 
+                            startWhiteout(); 
+                        }
+                    };
+
+                    videoElement.onended = function() {
+                        videoElement.ontimeupdate = null;
+                        startWhiteout();
+                    };
+
+                    setTimeout(() => {
+                        let playPromise = videoElement.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                fireConfetti();
+                            }).catch(error => { console.log("再生エラー:", error) });
+                        }
+                    }, 100);
+                } else {
+                    fireConfetti();
+                }
+            }
+        }
+
+        function startWhiteout() {
+            const whiteoutOverlay = document.getElementById('whiteout-overlay');
+            const videoElement = document.getElementById('success-video');
+            
+            if (!whiteoutOverlay) return;
+
+            if (videoElement) {
+                videoElement.pause(); 
+            }
+
+            whiteoutOverlay.style.display = 'block'; 
+            setTimeout(() => { whiteoutOverlay.style.opacity = '1'; }, 10);
+
+            setTimeout(() => {
+                document.getElementById('video-container').style.display = 'none';
+                
+                if (videoElement) {
+                    videoElement.onended = null;
+                    videoElement.ontimeupdate = null;
+                    videoElement.currentTime = 0; 
+                }
+
+                whiteoutOverlay.style.opacity = '0';
+
+                setTimeout(() => {
+                    whiteoutOverlay.style.display = 'none';
+                }, 500); 
+                
+            }, 600); 
+        }
+
+        function fireConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.7 }
+                });
+            }
+        }
+
+        function toggleSettings() {
+            document.getElementById('game-view').style.display = 'none';
+            document.getElementById('settings-view').style.display = 'block';
+        }
+
+        function saveSettings() {
+            const leftText = document.getElementById('input-left').value;
+            const rightText = document.getElementById('input-right').value;
+            const videosText = document.getElementById('textarea-videos').value;
+            
+            const leftArray = leftText.split('\n').map(s => s.trim()).filter(s => s !== '');
+            const rightArray = rightText.split('\n').map(s => s.trim()).filter(s => s !== '');
+            const videosArray = videosText.split('\n').map(s => s.trim()).filter(s => s !== '');
+
+            if (leftArray.length === 0 || rightArray.length === 0) {
+                alert("エラー：パネルの画像ファイル名を入力してください。");
+                return;
+            }
+
+            localStorage.setItem('matchGameConfigV3', JSON.stringify({
+                left: leftArray, right: rightArray, videos: videosArray
+            }));
+
+            document.getElementById('settings-view').style.display = 'none';
+            document.getElementById('game-view').style.display = 'block';
+            init(); 
+        }
+
+        function resetData() {
+            if (confirm("設定をすべて初期化します。よろしいですか？")) {
+                localStorage.removeItem('matchGameConfigV3');
+                location.reload();
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
