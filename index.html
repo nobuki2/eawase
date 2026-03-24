@@ -167,25 +167,59 @@
         const CUT_OFF_SECONDS = 2.0; 
 
         // ==========================================
-        // ★ 初期設定（ここを実際のファイル名に書き換えてください！）
-        // 共有した相手は、最初からこの設定で遊べるようになります。
-        // ※画像や動画の数に合わせて、行を増やしたり減らしたりしてOKです。
+        // ★ 初期設定（15種類のデータをセット済み）
         // ==========================================
         let config = {
             leftImages: [
-                'left1.png', // 1番目の左パネル画像
-                'left2.png', // 2番目の左パネル画像
-                'left3.png'  // 3番目の左パネル画像
+                'kudayasai01_iPad_1_1.png',
+                'kudayasai01_iPad_1_2.png',
+                'kudayasai01_iPad_1_3.png',
+                'kudayasai01_iPad_1_4.png',
+                'kudayasai01_iPad_1_5.png',
+                'kudayasai01_iPad_1_6.png',
+                'kudayasai01_iPad_1_7.png',
+                'kudayasai01_iPad_1_8.png',
+                'kudayasai01_iPad_1_9.png',
+                'kudayasai01_iPad_1_10.png',
+                'kudayasai01_iPad_1_11.png',
+                'kudayasai01_iPad_1_12.png',
+                'kudayasai01_iPad_1_13.png',
+                'kudayasai01_iPad_1_14.png',
+                'kudayasai01_iPad_1_15.png'
             ],
             rightImages: [
-                'right1.png', // 1番目の右パネル画像
-                'right2.png', // 2番目の右パネル画像
-                'right3.png'  // 3番目の右パネル画像
+                'kudayasai01_iPad_2_1.png',
+                'kudayasai01_iPad_2_2.png',
+                'kudayasai01_iPad_2_3.png',
+                'kudayasai01_iPad_2_4.png',
+                'kudayasai01_iPad_2_5.png',
+                'kudayasai01_iPad_2_6.png',
+                'kudayasai01_iPad_2_7.png',
+                'kudayasai01_iPad_2_8.png',
+                'kudayasai01_iPad_2_9.png',
+                'kudayasai01_iPad_2_10.png',
+                'kudayasai01_iPad_2_11.png',
+                'kudayasai01_iPad_2_12.png',
+                'kudayasai01_iPad_2_13.png',
+                'kudayasai01_iPad_2_14.png',
+                'kudayasai01_iPad_2_15.png'
             ],
             videos: [
-                '01_Strawberry.mp4', // 1番目が揃ったときの動画
-                '02_orange.m4v',     // 2番目が揃ったときの動画
-                '03_Melon.mp4'       // 3番目が揃ったときの動画
+                '01_Strawberry.mp4',
+                '02_orange.mp4',
+                '03_Melon.mp4',
+                '04_Pineapple.mp4',
+                '05_Cherry.mp4',
+                '06_Persimmon.mp4',
+                '07_Lemon.mp4',
+                '08_Tomato.mp4',
+                '09_Onion.mp4',
+                '10_Green pepper.mp4',
+                '11_Asparagus.mp4',
+                '12_Sweet potato.mp4',
+                '13_Cabbage.mp4',
+                '14_Cucumber.mp4',
+                '15_Lotus root.mp4'
             ]
         };
         // ==========================================
@@ -197,8 +231,8 @@
 
         function init() {
             try {
-                // セーブデータをV4に更新（古い画像が出ないようにしました）
-                const savedConfig = localStorage.getItem('matchGameConfigV4');
+                // キャッシュ対策でセーブデータをV5に更新
+                const savedConfig = localStorage.getItem('matchGameConfigV5');
                 if (savedConfig) {
                     const parsed = JSON.parse(savedConfig);
                     if (parsed.left && parsed.left.length > 0) config.leftImages = parsed.left;
@@ -206,13 +240,12 @@
                     if (parsed.videos) config.videos = parsed.videos;
                 }
                 
-                // 設定画面のテキストボックスに初期値を反映
                 document.getElementById('input-left').value = config.leftImages.join('\n');
                 document.getElementById('input-right').value = config.rightImages.join('\n');
                 document.getElementById('textarea-videos').value = config.videos.join('\n');
                 
             } catch (error) {
-                localStorage.removeItem('matchGameConfigV4');
+                localStorage.removeItem('matchGameConfigV5');
             }
             
             displayedImages[1] = createLoopArray(config.leftImages);
@@ -424,7 +457,7 @@
                 return;
             }
 
-            localStorage.setItem('matchGameConfigV4', JSON.stringify({
+            localStorage.setItem('matchGameConfigV5', JSON.stringify({
                 left: leftArray, right: rightArray, videos: videosArray
             }));
 
@@ -435,7 +468,7 @@
 
         function resetData() {
             if (confirm("設定をすべて初期化します。よろしいですか？")) {
-                localStorage.removeItem('matchGameConfigV4');
+                localStorage.removeItem('matchGameConfigV5');
                 location.reload();
             }
         }
