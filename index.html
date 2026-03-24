@@ -166,11 +166,29 @@
     <script>
         const CUT_OFF_SECONDS = 2.0; 
 
+        // ==========================================
+        // ★ 初期設定（ここを実際のファイル名に書き換えてください！）
+        // 共有した相手は、最初からこの設定で遊べるようになります。
+        // ※画像や動画の数に合わせて、行を増やしたり減らしたりしてOKです。
+        // ==========================================
         let config = {
-            leftImages: ['https://placehold.jp/3d4070/ffffff/320x320.png?text=L1', 'https://placehold.jp/40703d/ffffff/320x320.png?text=L2', 'https://placehold.jp/703d40/ffffff/320x320.png?text=L3'],
-            rightImages: ['https://placehold.jp/3d4070/ffffff/320x320.png?text=R1', 'https://placehold.jp/40703d/ffffff/320x320.png?text=R2', 'https://placehold.jp/703d40/ffffff/320x320.png?text=R3'],
-            videos: []
+            leftImages: [
+                'left1.png', // 1番目の左パネル画像
+                'left2.png', // 2番目の左パネル画像
+                'left3.png'  // 3番目の左パネル画像
+            ],
+            rightImages: [
+                'right1.png', // 1番目の右パネル画像
+                'right2.png', // 2番目の右パネル画像
+                'right3.png'  // 3番目の右パネル画像
+            ],
+            videos: [
+                '01_Strawberry.mp4', // 1番目が揃ったときの動画
+                '02_orange.m4v',     // 2番目が揃ったときの動画
+                '03_Melon.mp4'       // 3番目が揃ったときの動画
+            ]
         };
+        // ==========================================
 
         let displayedImages = { 1: [], 2: [] }; 
         let positions = { 1: 0, 2: 0 }; 
@@ -179,19 +197,22 @@
 
         function init() {
             try {
-                const savedConfig = localStorage.getItem('matchGameConfigV3');
+                // セーブデータをV4に更新（古い画像が出ないようにしました）
+                const savedConfig = localStorage.getItem('matchGameConfigV4');
                 if (savedConfig) {
                     const parsed = JSON.parse(savedConfig);
                     if (parsed.left && parsed.left.length > 0) config.leftImages = parsed.left;
                     if (parsed.right && parsed.right.length > 0) config.rightImages = parsed.right;
                     if (parsed.videos) config.videos = parsed.videos;
-                    
-                    document.getElementById('input-left').value = config.leftImages.join('\n');
-                    document.getElementById('input-right').value = config.rightImages.join('\n');
-                    document.getElementById('textarea-videos').value = config.videos.join('\n');
                 }
+                
+                // 設定画面のテキストボックスに初期値を反映
+                document.getElementById('input-left').value = config.leftImages.join('\n');
+                document.getElementById('input-right').value = config.rightImages.join('\n');
+                document.getElementById('textarea-videos').value = config.videos.join('\n');
+                
             } catch (error) {
-                localStorage.removeItem('matchGameConfigV3');
+                localStorage.removeItem('matchGameConfigV4');
             }
             
             displayedImages[1] = createLoopArray(config.leftImages);
@@ -403,7 +424,7 @@
                 return;
             }
 
-            localStorage.setItem('matchGameConfigV3', JSON.stringify({
+            localStorage.setItem('matchGameConfigV4', JSON.stringify({
                 left: leftArray, right: rightArray, videos: videosArray
             }));
 
@@ -414,7 +435,7 @@
 
         function resetData() {
             if (confirm("設定をすべて初期化します。よろしいですか？")) {
-                localStorage.removeItem('matchGameConfigV3');
+                localStorage.removeItem('matchGameConfigV4');
                 location.reload();
             }
         }
