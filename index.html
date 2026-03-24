@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>パネル絵合わせゲーム（大画面版）</title>
+    <title>パネル絵合わせゲーム（スマホ対応版）</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body { text-align: center; background: #f0f0f0; font-family: sans-serif; margin: 0; padding: 20px; user-select: none; }
@@ -13,14 +13,16 @@
 
         #game-view { display: block; }
         
-        /* パネルと動画を囲むコンテナ（2倍） */
+        /* パネルと動画を囲むコンテナ（スマホに合わせて縮むように変更） */
         .slot-machine-container {
             position: relative;
-            width: fit-content;
+            width: 100%;
+            max-width: 640px; /* パソコン等では最大640pxまで */
+            box-sizing: border-box;
             margin-left: auto;
             margin-right: auto;
             border-radius: 24px; 
-            border: 16px solid #444; 
+            border: 12px solid #444; 
             overflow: hidden;
             background: #fff;
             box-shadow: 0 10px 40px rgba(0,0,0,0.4); 
@@ -29,11 +31,13 @@
         .slot-machine {
             display: flex;
             justify-content: center;
+            width: 100%;
         }
         
-        /* リールの枠（320px） */
+        /* リールの枠（横幅50%ずつに等分するように変更） */
         .reel-frame {
-            width: 320px; 
+            flex: 1;
+            width: 50%; 
             position: relative;
             cursor: pointer;
             background: #fff;
@@ -115,9 +119,18 @@
             padding: 20px 80px; font-size: 32px; font-weight: bold; margin-top: 40px;
             background: #ff5722; color: white; border: none; border-radius: 60px; cursor: pointer;
             box-shadow: 0 8px 0 #d84315;
+            width: 100%; box-sizing: border-box;
         }
         .btn-action:active { transform: translateY(8px); box-shadow: none; }
         .reset-btn { background: #d32f2f; margin-top: 15px; }
+
+        /* スマホ向けの文字サイズ調整 */
+        @media (max-width: 600px) {
+            h1 { font-size: 28px; }
+            p { font-size: 16px; }
+            .slot-machine-container { border-width: 8px; border-radius: 16px; }
+            body { padding: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -159,67 +172,35 @@
             <label>成功時動画（複数行可）</label>
             <textarea id="textarea-videos" placeholder="例:&#10;video1.mp4"></textarea>
         </div>
-        <button class="btn-action" style="width: 100%; margin-top: 20px;" onclick="saveSettings()">保存して戻る</button>
-        <button class="btn-action reset-btn" style="width: 100%;" onclick="resetData()">設定を初期化する</button>
+        <button class="btn-action" onclick="saveSettings()">保存して戻る</button>
+        <button class="btn-action reset-btn" onclick="resetData()">設定を初期化する</button>
     </div>
 
     <script>
         const CUT_OFF_SECONDS = 2.0; 
 
         // ==========================================
-        // ★ 初期設定（15種類のデータをセット済み）
+        // ★ 15種類のデータをセット済み！
         // ==========================================
         let config = {
             leftImages: [
-                'kudayasai01_iPad_1_1.png',
-                'kudayasai01_iPad_1_2.png',
-                'kudayasai01_iPad_1_3.png',
-                'kudayasai01_iPad_1_4.png',
-                'kudayasai01_iPad_1_5.png',
-                'kudayasai01_iPad_1_6.png',
-                'kudayasai01_iPad_1_7.png',
-                'kudayasai01_iPad_1_8.png',
-                'kudayasai01_iPad_1_9.png',
-                'kudayasai01_iPad_1_10.png',
-                'kudayasai01_iPad_1_11.png',
-                'kudayasai01_iPad_1_12.png',
-                'kudayasai01_iPad_1_13.png',
-                'kudayasai01_iPad_1_14.png',
-                'kudayasai01_iPad_1_15.png'
+                'kudayasai01_iPad_1_1.png', 'kudayasai01_iPad_1_2.png', 'kudayasai01_iPad_1_3.png',
+                'kudayasai01_iPad_1_4.png', 'kudayasai01_iPad_1_5.png', 'kudayasai01_iPad_1_6.png',
+                'kudayasai01_iPad_1_7.png', 'kudayasai01_iPad_1_8.png', 'kudayasai01_iPad_1_9.png',
+                'kudayasai01_iPad_1_10.png', 'kudayasai01_iPad_1_11.png', 'kudayasai01_iPad_1_12.png',
+                'kudayasai01_iPad_1_13.png', 'kudayasai01_iPad_1_14.png', 'kudayasai01_iPad_1_15.png'
             ],
             rightImages: [
-                'kudayasai01_iPad_2_1.png',
-                'kudayasai01_iPad_2_2.png',
-                'kudayasai01_iPad_2_3.png',
-                'kudayasai01_iPad_2_4.png',
-                'kudayasai01_iPad_2_5.png',
-                'kudayasai01_iPad_2_6.png',
-                'kudayasai01_iPad_2_7.png',
-                'kudayasai01_iPad_2_8.png',
-                'kudayasai01_iPad_2_9.png',
-                'kudayasai01_iPad_2_10.png',
-                'kudayasai01_iPad_2_11.png',
-                'kudayasai01_iPad_2_12.png',
-                'kudayasai01_iPad_2_13.png',
-                'kudayasai01_iPad_2_14.png',
-                'kudayasai01_iPad_2_15.png'
+                'kudayasai01_iPad_2_1.png', 'kudayasai01_iPad_2_2.png', 'kudayasai01_iPad_2_3.png',
+                'kudayasai01_iPad_2_4.png', 'kudayasai01_iPad_2_5.png', 'kudayasai01_iPad_2_6.png',
+                'kudayasai01_iPad_2_7.png', 'kudayasai01_iPad_2_8.png', 'kudayasai01_iPad_2_9.png',
+                'kudayasai01_iPad_2_10.png', 'kudayasai01_iPad_2_11.png', 'kudayasai01_iPad_2_12.png',
+                'kudayasai01_iPad_2_13.png', 'kudayasai01_iPad_2_14.png', 'kudayasai01_iPad_2_15.png'
             ],
             videos: [
-                '01_Strawberry.mp4',
-                '02_orange.mp4',
-                '03_Melon.mp4',
-                '04_Pineapple.mp4',
-                '05_Cherry.mp4',
-                '06_Persimmon.mp4',
-                '07_Lemon.mp4',
-                '08_Tomato.mp4',
-                '09_Onion.mp4',
-                '10_Green pepper.mp4',
-                '11_Asparagus.mp4',
-                '12_Sweet potato.mp4',
-                '13_Cabbage.mp4',
-                '14_Cucumber.mp4',
-                '15_Lotus root.mp4'
+                '01_Strawberry.mp4', '02_orange.mp4', '03_Melon.mp4', '04_Pineapple.mp4', '05_Cherry.mp4',
+                '06_Persimmon.mp4', '07_Lemon.mp4', '08_Tomato.mp4', '09_Onion.mp4', '10_Green pepper.mp4',
+                '11_Asparagus.mp4', '12_Sweet potato.mp4', '13_Cabbage.mp4', '14_Cucumber.mp4', '15_Lotus root.mp4'
             ]
         };
         // ==========================================
@@ -231,8 +212,7 @@
 
         function init() {
             try {
-                // キャッシュ対策でセーブデータをV5に更新
-                const savedConfig = localStorage.getItem('matchGameConfigV5');
+                const savedConfig = localStorage.getItem('matchGameConfigV6');
                 if (savedConfig) {
                     const parsed = JSON.parse(savedConfig);
                     if (parsed.left && parsed.left.length > 0) config.leftImages = parsed.left;
@@ -245,7 +225,7 @@
                 document.getElementById('textarea-videos').value = config.videos.join('\n');
                 
             } catch (error) {
-                localStorage.removeItem('matchGameConfigV5');
+                localStorage.removeItem('matchGameConfigV6');
             }
             
             displayedImages[1] = createLoopArray(config.leftImages);
@@ -288,6 +268,7 @@
         }
 
         function initReelHeight(height) {
+            if(height === 0) return; // エラー回避
             calculatedPanelHeight = height; 
             document.querySelectorAll('.reel-frame').forEach(frame => {
                 frame.style.height = height + 'px'; 
@@ -295,6 +276,14 @@
             updateReelPosition(1, false);
             updateReelPosition(2, false);
         }
+
+        // 画面のサイズが変わった時（スマホを横にした時など）に高さを再計算
+        window.addEventListener('resize', () => {
+            const firstImg = document.querySelector('#reel1 img');
+            if (firstImg && firstImg.clientHeight > 0) {
+                initReelHeight(firstImg.clientHeight);
+            }
+        });
 
         function handleReelClick(event, id) {
             if (isAnimating) return;
@@ -457,7 +446,7 @@
                 return;
             }
 
-            localStorage.setItem('matchGameConfigV5', JSON.stringify({
+            localStorage.setItem('matchGameConfigV6', JSON.stringify({
                 left: leftArray, right: rightArray, videos: videosArray
             }));
 
@@ -468,7 +457,7 @@
 
         function resetData() {
             if (confirm("設定をすべて初期化します。よろしいですか？")) {
-                localStorage.removeItem('matchGameConfigV5');
+                localStorage.removeItem('matchGameConfigV6');
                 location.reload();
             }
         }
